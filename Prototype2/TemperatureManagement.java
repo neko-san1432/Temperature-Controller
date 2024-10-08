@@ -2,11 +2,9 @@ package Prototype2;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
-
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Objects;
@@ -16,20 +14,20 @@ public class TemperatureManagement extends JFrame {
   int width = 800, height = 600, tick = 0;
   JLabel[] rooms = {new JLabel("Room"), new JLabel("Kitchen"), new JLabel("Living Room")}, roomTem = {new JLabel(), new JLabel(), new JLabel()};
   JLabel outsideTem = new JLabel(), timeLabel = new JLabel("--:--:-- AM, --");
-  JButton[] fan = {new JButton(), new JButton(), new JButton()}, process = {new JButton(), new JButton(), new JButton()};
+  JButton[] fan = {new JButton(), new JButton(), new JButton()};
+  JLabel[] process = {new JLabel(), new JLabel(), new JLabel()};
   JButton unit = new JButton("F");
   String[] roomFan = {"Off", "Off", "Off"}, fanMode = {"--Standby--", "--Standby--", "--Standby--"};
   String lab = "Outside Temperature: ";
-  float[] roomTempFar = {96.8f, 96.8f, 96.8F};
-  float[] roomcelcius = {36, 36, 36};
+  float[] roomTemp = {96.8f, 96.8f, 96.8F};
   String un = " F";
   float outTemp = 96.8f;
   JSlider[] adjustTemperature = {new JSlider(33, 113, 96), new JSlider(33, 113, 96), new JSlider(33, 113, 96)};
   Timer r1, r2, r3, s, u;
   float[] preferredTemperatures = {96.8f, 96.8f, 96.8f};
-  float[] preferredTemperaturescel = {36, 36, 36};
   int[][] ticks = {{0, 0}, {0, 0}, {0, 0}};
   JLayeredPane jl = new JLayeredPane();
+
   public TemperatureManagement() {
     setSize(width, height);
     setUndecorated(true);
@@ -49,27 +47,41 @@ public class TemperatureManagement extends JFrame {
   }
 
   private float convertToFar(float cel) {
-    return ((cel * ((float) 9 / 5)) + 32);
+    System.out.println(cel);
+    float x = cel * 9;
+    System.out.println("1. " + x);
+    float y = x / 5;
+    System.out.println("2. " + y);
+    return y + 32;
   }
 
   private float convertToCel(float fah) {
-    return (fah - 32) * ((float) 5 / 9);
+    System.out.println(fah);
+    float x = fah - 32;
+    System.out.println("1. " + x);
+    float y = x * 5;
+    System.out.println("2. " + y);
+    return y / 9;
   }
 
   private void setCel() {
     un = " C";
     for (int i = 0; i < 3; i++) {
-      roomcelcius[i] = convertToCel(roomTempFar[i]);
-      preferredTemperaturescel[i] = convertToCel(preferredTemperatures[i]);
-      System.out.println(i+" "+preferredTemperaturescel[i]);
-      roomTem[i].setText((int) roomcelcius[i] + " C");
+      roomTemp[i] = convertToCel(roomTemp[i]);
+      roomTem[i].setText((int) roomTemp[i] + " C");
     }
-    outTemp = convertToCel(outTemp);
+//    outTemp = convertToCel(outTemp);
     outsideTem.setText("Outside Temperature: " + (int) outTemp + " C");
     for (int i = 0; i < adjustTemperature.length; i++) {
-      adjustTemperature[i].setValue((int) preferredTemperaturescel[i]);
-      adjustTemperature[i].setMaximum(46);
+      preferredTemperatures[i] = convertToCel(preferredTemperatures[i]);
+    }
+
+    for (int i = 0; i < adjustTemperature.length; i++) {
+      adjustTemperature[i].setValue((int) preferredTemperatures[i]);
+    }
+    for (int i = 0; i < adjustTemperature.length; i++) {
       adjustTemperature[i].setMinimum(0);
+      adjustTemperature[i].setMaximum(46);
     }
 
   }
@@ -77,16 +89,23 @@ public class TemperatureManagement extends JFrame {
   private void setFar() {
     un = " F";
     for (int i = 0; i < 3; i++) {
-      roomTempFar[i] = convertToFar(roomcelcius[i]);
-      preferredTemperatures[i] = convertToFar(preferredTemperaturescel[i]);
-      roomTem[i].setText((int) roomTempFar[i] + " F");
+      roomTemp[i] = convertToFar(roomTemp[i]);
+      roomTem[i].setText((int) roomTemp[i] + " F");
     }
-    outTemp = convertToFar(outTemp);
+//    outTemp = convertToFar(outTemp);
     outsideTem.setText("Outside Temperature: " + (int) outTemp + " F");
     for (int i = 0; i < adjustTemperature.length; i++) {
-      adjustTemperature[i].setValue((int) preferredTemperatures[i]);
       adjustTemperature[i].setMaximum(113);
       adjustTemperature[i].setMinimum(33);
+    }
+    for (int i = 0; i < adjustTemperature.length; i++) {
+      preferredTemperatures[i] = convertToFar(preferredTemperatures[i]);
+    }
+    for (int i = 0; i < adjustTemperature.length; i++) {
+
+      int t =(int) preferredTemperatures[i];
+      adjustTemperature[i].setValue(t);
+
     }
 
   }
@@ -95,29 +114,26 @@ public class TemperatureManagement extends JFrame {
     r1 = new Timer(60000, _ -> {
       float tmp = 0;
       if (un.equals(" F")) {
-        if ((int) roomTempFar[0] > (int) preferredTemperatures[0]) {
-          tmp = roomTempFar[0] -= 33.8f;
+        if ((int) roomTemp[0] > (int) preferredTemperatures[0]) {
+          tmp = roomTemp[0] -= 33.8f;
           ticks[0][1] = 1;
         }
-        if ((int) roomTempFar[0] < (int) preferredTemperatures[0]) {
-          tmp = roomTempFar[0] += 33.8f;
+        if ((int) roomTemp[0] < (int) preferredTemperatures[0]) {
+          tmp = roomTemp[0] += 33.8f;
           ticks[0][1] = 2;
-        }
-        if ((int) roomTempFar[0] == (int) preferredTemperatures[0]) {
-          ticks[0][1] = 0;
         }
       } else {
-        if ((int) roomcelcius[0] > (int) preferredTemperaturescel[0]) {
-          tmp = roomcelcius[0] -= 1;
+        if ((int) roomTemp[0] > (int) preferredTemperatures[0]) {
+          tmp = roomTemp[0] -= 1;
           ticks[0][1] = 1;
         }
-        if ((int) roomcelcius[0] < (int) preferredTemperaturescel[0]) {
-          tmp = roomcelcius[0] += 1;
+        if ((int) roomTemp[0] < (int) preferredTemperatures[0]) {
+          tmp = roomTemp[0] += 1;
           ticks[0][1] = 2;
         }
-        if ((int) roomcelcius[0] == (int) preferredTemperaturescel[0]) {
-          ticks[0][1] = 0;
-        }
+      }
+      if ((int) roomTemp[0] == (int) preferredTemperatures[0]) {
+        ticks[0][1] = 0;
       }
       roomTem[0].setText((int) tmp + un);
       modifyProcessStatus();
@@ -125,29 +141,26 @@ public class TemperatureManagement extends JFrame {
     r2 = new Timer(60000, _ -> {
       float tmp = 0;
       if (un.equals(" F")) {
-        if ((int) roomTempFar[1] > (int) preferredTemperatures[1]) {
-          tmp = roomTempFar[1] -= 33.8f;
+        if ((int) roomTemp[1] > (int) preferredTemperatures[1]) {
+          tmp = roomTemp[1] -= 33.8f;
           ticks[1][1] = 1;
         }
-        if ((int) roomTempFar[1] < (int) preferredTemperatures[1]) {
-          tmp = roomTempFar[1] += 33.8f;
+        if ((int) roomTemp[1] < (int) preferredTemperatures[1]) {
+          tmp = roomTemp[1] += 33.8f;
           ticks[1][1] = 2;
-        }
-        if ((int) roomTempFar[1] == (int) preferredTemperatures[1]) {
-          ticks[1][1] = 0;
         }
       } else {
-        if ((int) roomcelcius[1] > (int) preferredTemperaturescel[1]) {
-          tmp = roomcelcius[1] -= 1;
+        if ((int) roomTemp[1] > (int) preferredTemperatures[1]) {
+          tmp = roomTemp[1] -= 1;
           ticks[1][1] = 1;
         }
-        if ((int) roomcelcius[1] < (int) preferredTemperaturescel[1]) {
-          tmp = roomcelcius[1] += 1;
+        if ((int) roomTemp[1] < (int) preferredTemperatures[1]) {
+          tmp = roomTemp[1] += 1;
           ticks[1][1] = 2;
         }
-        if ((int) roomcelcius[1] == (int) preferredTemperaturescel[1]) {
-          ticks[1][1] = 0;
-        }
+      }
+      if ((int) roomTemp[1] == (int) preferredTemperatures[1]) {
+        ticks[1][1] = 0;
       }
       roomTem[1].setText((int) tmp + un);
       modifyProcessStatus();
@@ -155,29 +168,26 @@ public class TemperatureManagement extends JFrame {
     r3 = new Timer(60000, _ -> {
       float tmp = 0;
       if (un.equals(" F")) {
-        if ((int) roomTempFar[2] > (int) preferredTemperatures[2]) {
-          tmp = roomTempFar[2] -= 33.8f;
+        if ((int) roomTemp[2] > (int) preferredTemperatures[2]) {
+          tmp = roomTemp[2] -= 33.8f;
           ticks[2][1] = 1;
         }
-        if ((int) roomTempFar[2] < (int) preferredTemperatures[2]) {
-          tmp = roomTempFar[2] += 33.8f;
+        if ((int) roomTemp[2] < (int) preferredTemperatures[2]) {
+          tmp = roomTemp[2] += 33.8f;
           ticks[2][1] = 2;
-        }
-        if ((int) roomTempFar[2] == (int) preferredTemperatures[2]) {
-          ticks[2][1] = 0;
         }
       } else {
-        if ((int) roomcelcius[2] > (int) preferredTemperaturescel[2]) {
-          tmp = roomcelcius[2] -= 1;
+        if ((int) roomTemp[2] > (int) preferredTemperatures[2]) {
+          tmp = roomTemp[2] -= 1;
           ticks[2][1] = 1;
         }
-        if ((int) roomcelcius[2] < (int) preferredTemperaturescel[2]) {
-          tmp = roomcelcius[2] += 1;
+        if ((int) roomTemp[2] < (int) preferredTemperatures[2]) {
+          tmp = roomTemp[2] += 1;
           ticks[2][1] = 2;
         }
-        if ((int) roomcelcius[2] == (int) preferredTemperaturescel[2]) {
-          ticks[2][1] = 0;
-        }
+      }
+      if ((int) roomTemp[2] == (int) preferredTemperatures[2]) {
+        ticks[2][1] = 0;
       }
       roomTem[2].setText((int) tmp + un);
       modifyProcessStatus();
@@ -203,30 +213,6 @@ public class TemperatureManagement extends JFrame {
     s.start();
     u.start();
     for (int i = 0; i < rooms.length; i++) {
-      int finalI = i;
-      adjustTemperature[i].addChangeListener(_ -> {
-        if (Objects.equals(un, " F")) {
-          preferredTemperatures[finalI] =convertToFar(adjustTemperature[finalI].getValue());
-          if ((int) preferredTemperatures[finalI] > (int) roomTempFar[finalI]) {
-            ticks[finalI][1] = 2;
-          } else if ((int) preferredTemperatures[finalI] < (int) roomTempFar[finalI]) {
-            ticks[finalI][1] = 1;
-          } else if ((int) preferredTemperatures[finalI] == (int) roomTempFar[finalI]) {
-            ticks[finalI][1] = 0;
-          }
-          modifyProcessStatus();
-        } else {
-          preferredTemperaturescel[finalI] = convertToCel(adjustTemperature[finalI].getValue());
-          if ((int)preferredTemperaturescel[finalI] > (int)roomcelcius[finalI]) {
-            ticks[finalI][1] = 2;
-          } else if ((int)preferredTemperaturescel[finalI] < (int)roomcelcius[finalI]) {
-            ticks[finalI][1] = 1;
-          } else if ((int)preferredTemperaturescel[finalI] == (int)roomcelcius[finalI]) {
-            ticks[finalI][1] = 0;
-          }
-
-        }
-      });
       adjustTemperature[i].setMajorTickSpacing(13);
       adjustTemperature[i].setPaintLabels(true);
       adjustTemperature[i].setPaintTicks(true);
@@ -249,7 +235,6 @@ public class TemperatureManagement extends JFrame {
       room.setHorizontalAlignment(JLabel.CENTER);
       jl.add(room);
       roomTem[i].setSize(100, 30);
-      roomTem[i].setHorizontalTextPosition(SwingConstants.CENTER);
       roomTem[i].setHorizontalAlignment(SwingConstants.CENTER);
       roomTem[i].setLocation((100 * i) + 10, 90);
       roomTem[i].setFont(new Font("Arial", Font.PLAIN, 9));
@@ -269,13 +254,12 @@ public class TemperatureManagement extends JFrame {
       fan[i].setBorderPainted(false);
       fan[i].setFocusable(false);
       fan[i].setBackground(Color.gray);
-      fan[i].setBorder(new LineBorder(Color.black, 1));
       process[i].setSize(100, 30);
       process[i].setLocation((100 * i) + 10, 160);
       process[i].setOpaque(true);
-      process[i].setBorderPainted(false);
       process[i].setFocusable(false);
       process[i].setBackground(Color.gray);
+      process[i].setHorizontalAlignment(SwingConstants.CENTER);
       process[i].setBorder(new LineBorder(Color.black, 1));
     }
     for (int i = 0; i < rooms.length; i++) {
@@ -285,6 +269,20 @@ public class TemperatureManagement extends JFrame {
       adjustTemperature[i].setFont(new Font("Arial", Font.PLAIN, 12));
       adjustTemperature[i].setOpaque(false);
       adjustTemperature[i].setBackground(Color.white);
+      int finalI = i;
+      adjustTemperature[i].addChangeListener(e -> {
+        if (adjustTemperature[finalI].getValue() > (int) roomTemp[finalI]) {
+          ticks[finalI][1] = 2;
+        }
+        if (adjustTemperature[finalI].getValue() < (int) roomTemp[finalI]) {
+          ticks[finalI][1] = 1;
+        }
+        if (adjustTemperature[finalI].getValue() == (int) roomTemp[finalI]) {
+          ticks[finalI][1] = 0;
+        }
+//        preferredTemperatures[finalI] = adjustTemperature[finalI].getValue();
+        modifyProcessStatus();
+      });
     }
     unit.setSize(100, 100);
     unit.setFocusable(false);
@@ -324,7 +322,7 @@ public class TemperatureManagement extends JFrame {
 
   private void setTemps() {
     for (int i = 0; i < rooms.length; i++) {
-      roomTem[i].setText((int) roomTempFar[i] + " F");
+      roomTem[i].setText((int) roomTemp[i] + " F");
     }
     outsideTem.setText(lab + (int) outTemp + " F");
   }
