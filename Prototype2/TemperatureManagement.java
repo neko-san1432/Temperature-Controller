@@ -1,421 +1,433 @@
 package Prototype2;
 
-import test_files.calendar;
-
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Objects;
 
 public class TemperatureManagement extends JFrame {
-    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-    int width = 800, height = 600, tick = 0;
-    JLabel[] rooms = {new JLabel("Room"), new JLabel("Kitchen"), new JLabel("Living Room")}, roomTem = {new JLabel(), new JLabel(), new JLabel()};
-    JLabel outsideTem = new JLabel(), timeLabel = new JLabel("--:--:-- AM, --");
-    JButton[] fan = {new JButton(), new JButton(), new JButton()};
-    JLabel[] process = {new JLabel(), new JLabel(), new JLabel()};
-    JButton unit = new JButton("F");
-    String[] roomFan = {"Off", "Off", "Off"}, fanMode = {"--Standby--", "--Standby--", "--Standby--"};
-    String lab = "Outside Temperature: ";
-    float[] roomTemp = {96.8f, 96.8f, 96.8F};
-    static String un = " F";
-    float outTemp = 96.8f;
-    JSlider[] adjustTemperature = {new JSlider(33, 113, 96), new JSlider(33, 113, 96), new JSlider(33, 113, 96)};
-    Timer r1, r2, r3, s, u;
-    float[] preferredTemperatures = {96.8f, 96.8f, 96.8f};
-    int[][] ticks = {{0, 0}, {0, 0}, {0, 0}};
-    JLayeredPane jl = new JLayeredPane();
-    JPanel p = new calendar(350, 300);
-    JTextField textField = new JTextField();
-    //to be edited
-    JButton set = new JButton("set");
-    HashMap<String,Integer> getTemp = new HashMap<>();
-    HashMap<String,Integer> getSchedTime = new HashMap<>();
-    public TemperatureManagement() {
-        setSize(width, height);
-        setUndecorated(true);
-        setResizable(false);
-        setLocation((int) ((screenSize.getWidth() / 2) - 400), (int) ((screenSize.getHeight() / 2) - 300));
-        setLayout(null);
-        set();
-        setTemps();
-        setTickSettings();
-        modifyFanStatus();
+  static String un = " F";
+  Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+  int width = 800, height = 600, tick = 0;
+  JLabel[] rooms = {new JLabel("Room"), new JLabel("Kitchen"), new JLabel("Living Room")}, roomTem = {new JLabel(), new JLabel(), new JLabel()};
+  JLabel outsideTem = new JLabel(),
+  timeLabel = new JLabel("--:--:-- AM, --");
+  JButton[] fan = {new JButton(), new JButton(), new JButton()};
+  JLabel[] process = {new JLabel(), new JLabel(), new JLabel()};
+  JButton unit = new JButton("F");
+  String[] roomFan = {"Off", "Off", "Off"}, fanMode = {"--Standby--", "--Standby--", "--Standby--"};
+  String lab = "Outside Temperature: ";
+  float[] roomTemp = {96.8f, 96.8f, 96.8F};
+  float outTemp = 96.8f;
+  JSlider[] adjustTemperature = {new JSlider(33, 113, 96), new JSlider(33, 113, 96), new JSlider(33, 113, 96)};
+  Timer[] temperatureTask = {new Timer(0, null), new Timer(0, null), new Timer(0, null)};
+  Timer s, u;
+  float[] preferredTemperatures = {96.8f, 96.8f, 96.8f};
+  int[][] ticks = {{0, 0}, {0, 0}, {0, 0}};
+  JLayeredPane jl = new JLayeredPane();
+  JPanel p = new calendar(350, 300);
+  static JPanel ts = new SetTime(95, 100);
+  static JTextField textField = new JTextField();
+  //to be edited
+  JButton set = new JButton("set");
+  static HashMap<String, Integer> getTemp = new HashMap<>(), getSchedTime = new HashMap<>();
+  String formattedDateTime = "";
+  DecimalFormat tempTemperature = new DecimalFormat("##. #");
+  String[] animation = {"Cooling", "Cooling.", "Cooling..", "Cooling...", "Heating", "Heating.", "Heating..", "Heating...","Cooled","Heated"};
+  Timer temp = null;
+  static String day = "",month = "",year="";
+  public TemperatureManagement() {
+    setSize(width, height);
+    setUndecorated(true);
+    setResizable(false);
+    setLocation((int) ((screenSize.getWidth() / 2) - 400), (int) ((screenSize.getHeight() / 2) - 300));
+    setLayout(null);
+    set();
+    setTemps();
+    setTickSettings();
+    modifyFanStatus();
+    modifyProcessStatus();
+    startModifyTemperature();
+  }
+
+  public static void main(String[] args) {
+    SwingUtilities.invokeLater(() -> new TemperatureManagement().setVisible(true));
+  }
+
+  private float convertToFar(float cel) {
+    float x = cel * 9;
+    float y = x / 5;
+    return y + 32;
+  }
+
+  private float convertToCel(float fah) {
+    float x = fah - 32;
+    float y = x * 5;
+    return y / 9;
+  }
+
+  private void setCel() {
+    un = " C";
+    for (int i = 0; i < 3; i++) {
+      roomTemp[i] = convertToCel(roomTemp[i]);
+      roomTem[i].setText(tempTemperature.format(roomTemp[i]) + " C");
+    }
+    outTemp = convertToCel(outTemp);
+    outsideTem.setText("Outside Temperature: " + tempTemperature.format(outTemp) + " C");
+    for (int i = 0; i < adjustTemperature.length; i++) {
+      if (preferredTemperatures[i] > adjustTemperature[i].getValue()) {
+        preferredTemperatures[i] = convertToCel(preferredTemperatures[i]);
+      } else {
+        preferredTemperatures[i] = convertToCel(adjustTemperature[i].getValue());
+      }
+    }
+
+    for (int i = 0; i < adjustTemperature.length; i++) {
+      adjustTemperature[i].setValue((int) preferredTemperatures[i]);
+    }
+    for (int i = 0; i < adjustTemperature.length; i++) {
+      adjustTemperature[i].setMinimum(0);
+      adjustTemperature[i].setMaximum(46);
+    }
+
+  }
+
+  private void setFar() {
+    un = " F";
+    for (int i = 0; i < 3; i++) {
+      roomTemp[i] = convertToFar(roomTemp[i]);
+      roomTem[i].setText(tempTemperature.format(roomTemp[i]) + " F");
+    }
+    outTemp = convertToFar(outTemp);
+    outsideTem.setText("Outside Temperature: " + tempTemperature.format(outTemp) + " F");
+    for (int i = 0; i < adjustTemperature.length; i++) {
+      adjustTemperature[i].setMaximum(113);
+      adjustTemperature[i].setMinimum(33);
+    }
+    for (int i = 0; i < adjustTemperature.length; i++) {
+      if (preferredTemperatures[i] > adjustTemperature[i].getValue()) {
+        preferredTemperatures[i] = convertToFar(preferredTemperatures[i]);
+      } else {
+        preferredTemperatures[i] = convertToFar(adjustTemperature[i].getValue());
+      }
+    }
+    for (int i = 0; i < adjustTemperature.length; i++) {
+      int t = (int) preferredTemperatures[i];
+      adjustTemperature[i].setValue(t);
+    }
+
+  }
+
+  private void startModifyTemperature() {
+    s = new Timer(300000, _ -> {
+      float x = weather.getWeather();
+      if (x > -1) {
+        outsideTem.setText(lab + x + un);
+      } else {
+        outsideTem.setText(lab + "No internet connection");
+
+      }
+    });
+    u = new Timer(1000, _ -> updateTime());
+    s.start();
+    u.start();
+    for (int i = 0; i < rooms.length; i++) {
+      adjustTemperature[i].setMajorTickSpacing(13);
+      adjustTemperature[i].setPaintLabels(true);
+      adjustTemperature[i].setPaintTicks(true);
+    }
+  }
+
+  private void temperatureManipulation(int index) {
+    if (un.equals(" F")) {
+      if ((int) roomTemp[index] > adjustTemperature[index].getValue()) {
+        roomTemp[index] -= 1;
+        ticks[index][1] = 1;
+      }
+      if ((int) roomTemp[index] < adjustTemperature[index].getValue()) {
+        roomTemp[0] += 1;
+        ticks[index][1] = 2;
+      }
+    } else {
+      if ((int) roomTemp[index] > adjustTemperature[index].getValue()) {
+        roomTemp[index] -= 0.03f;
+        ticks[index][1] = 1;
+      }
+      if ((int) roomTemp[index] < adjustTemperature[index].getValue()) {
+        roomTemp[index] += 0.03f;
+        ticks[index][1] = 2;
+      }
+    }
+    roomTem[index].setText(tempTemperature.format(roomTemp[index]) + un);
+  }
+
+  private void set() {
+    jl.setSize(width, height);
+    jl.setLayout(null);
+    jl.setOpaque(true);
+    jl.setBackground(Color.white);
+    ts.setLocation(525, 420);
+    p.setLocation(398, 100);
+    p.setOpaque(true);
+    p.setBackground(Color.white);
+    jl.add(ts);
+    jl.add(p);
+    for (int i = 0; i < rooms.length; i++) {
+      JLabel room = rooms[i];
+      room.setSize(100, 20);
+      room.setLocation((100 * i) + 10, 80);
+      room.setFont(new Font("Arial", Font.PLAIN, 13));
+      room.setOpaque(true);
+      rooms[i].setHorizontalTextPosition(JLabel.CENTER);
+      rooms[i].setBackground(Color.white);
+      room.setHorizontalAlignment(JLabel.CENTER);
+      jl.add(room);
+      roomTem[i].setSize(100, 30);
+      roomTem[i].setHorizontalAlignment(SwingConstants.CENTER);
+      roomTem[i].setLocation((100 * i) + 10, 90);
+      roomTem[i].setFont(new Font("Arial", Font.PLAIN, 9));
+
+    }
+    textField.setSize(0, 0);
+    textField.setLocation(0, 0);
+    set.setSize(0, 0);
+    set.setLocation(0, 0);
+    outsideTem.setSize(800, 50);
+    outsideTem.setLocation(10, 0);
+    outsideTem.setFont(new Font("Arial", Font.PLAIN, 20));
+    timeLabel.setSize(400, 200);
+    timeLabel.setLocation(10, 450);
+    timeLabel.setFont(new Font("Calibri", Font.PLAIN, 30));
+    for (int i = 0; i < rooms.length; i++) {
+      fan[i].setSize(100, 30);
+      fan[i].setLocation((100 * i) + 10, 120);
+      fan[i].setOpaque(true);
+      fan[i].setBorderPainted(false);
+      fan[i].setFocusable(false);
+      fan[i].setBackground(Color.gray);
+      process[i].setSize(100, 30);
+      process[i].setLocation((100 * i) + 10, 160);
+      process[i].setOpaque(true);
+      process[i].setFocusable(false);
+      process[i].setBackground(Color.gray);
+      process[i].setHorizontalAlignment(SwingConstants.CENTER);
+      process[i].setBorder(new LineBorder(Color.black, 1));
+    }
+    for (int i = 0; i < rooms.length; i++) {
+      adjustTemperature[i].setOrientation(SwingConstants.VERTICAL);
+      adjustTemperature[i].setSize(100, 300);
+      adjustTemperature[i].setLocation((100 * i) + 10, 190);
+      adjustTemperature[i].setFont(new Font("Arial", Font.PLAIN, 12));
+      adjustTemperature[i].setOpaque(false);
+      adjustTemperature[i].setBackground(Color.white);
+      int finalI = i;
+      adjustTemperature[i].addChangeListener(e -> {
+        if (adjustTemperature[finalI].getValue() > (int) roomTemp[finalI]) {
+          ticks[finalI][1] = 2;
+          temperatureTask[finalI] = new Timer(10000, _ -> {
+            temperatureManipulation(finalI);
+          });
+          temperatureTask[finalI].start();
+        }
+        if (adjustTemperature[finalI].getValue() < (int) roomTemp[finalI]) {
+          ticks[finalI][1] = 1;
+          temperatureTask[finalI] = new Timer(5000, _ -> {
+            temperatureManipulation(finalI);
+          });
+          temperatureTask[finalI].start();
+        }
+        if (adjustTemperature[finalI].getValue() == (int) roomTemp[finalI]) {
+          ticks[finalI][1] = 0;
+          if (temperatureTask[finalI].isRunning()) {
+            temperatureTask[finalI].stop();
+          }
+          temperatureManipulation(finalI);
+        }
         modifyProcessStatus();
-        startModifyTemperature();
+      });
+      adjustTemperature[i].addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseReleased(MouseEvent e) {
+          preferredTemperatures[finalI] = adjustTemperature[finalI].getValue();
+        }
+      });
     }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new TemperatureManagement().setVisible(true));
+    unit.setSize(100, 100);
+    unit.setFocusable(false);
+    unit.setLocation(getWidth() - 100, getHeight() - 100);
+    unit.addActionListener(_ -> {
+      if (tick == 0) {
+        tick++;
+        setCel();
+        unit.setText("C");
+      } else if (tick == 1) {
+        tick--;
+        unit.setText("F");
+        setFar();
+      }
+    });
+    for (int i = 0; i < rooms.length; i++) {
+      jl.add(roomTem[i], JLayeredPane.DRAG_LAYER);
     }
-
-    private float convertToFar(float cel) {
-        float x = cel * 9;
-        float y = x / 5;
-        return y + 32;
+    jl.add(outsideTem);
+    jl.add(timeLabel);
+    for (int i = 0; i < rooms.length; i++) {
+      jl.add(fan[i]);
+      jl.add(process[i]);
     }
-
-    private float convertToCel(float fah) {
-        float x = fah - 32;
-        float y = x * 5;
-        return y / 9;
+    for (int i = 0; i < rooms.length; i++) {
+      jl.add(adjustTemperature[i]);
     }
+    textField.setLocation(0,0);
+    textField.setSize(0,0);
+    textField.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyTyped(KeyEvent e) {
+        if(!Character.isDigit(e.getKeyChar())){
+          e.consume();
+        }
+      }
+    });
+    set.setSize(0,0);
+    set.setLocation(0,0);
+    set.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        if(un.equals(" F")){
+          if(Integer.parseInt(textField.getText())>113||Integer.parseInt(textField.getText())<33){
+            //error
+          }else{
+            //ok
+          }
+        }else {
+          if(Integer.parseInt(textField.getText())>46||Integer.parseInt(textField.getText())<0){
+            //error
+          }else{
+            //ok
+          }
+        }
+      }
+    });
+    jl.add(unit);
+    jl.add(textField);
+    jl.add(set);
+    add(jl);
+  }
 
-    private void setCel() {
-        un = " C";
-        for (int i = 0; i < 3; i++) {
-            roomTemp[i] = convertToCel(roomTemp[i]);
-            roomTem[i].setText((int) roomTemp[i] + " C");
-        }
-        outTemp = convertToCel(outTemp);
-        outsideTem.setText("Outside Temperature: " + (int) outTemp + " C");
-        for (int i = 0; i < adjustTemperature.length; i++) {
-            if (preferredTemperatures[i] > adjustTemperature[i].getValue()) {
-                preferredTemperatures[i] = convertToCel(preferredTemperatures[i]);
-            } else {
-                preferredTemperatures[i] = convertToCel(adjustTemperature[i].getValue());
-            }
-        }
+  Color getColor1(String hex) {
+    return new Color(Integer.valueOf(hex.substring(1, 3), 16),
+    Integer.valueOf(hex.substring(3, 5), 16),
+    Integer.valueOf(hex.substring(5, 7), 16));
+  }
 
-        for (int i = 0; i < adjustTemperature.length; i++) {
-            adjustTemperature[i].setValue((int) preferredTemperatures[i]);
-        }
-        for (int i = 0; i < adjustTemperature.length; i++) {
-            adjustTemperature[i].setMinimum(0);
-            adjustTemperature[i].setMaximum(46);
-        }
-
+  private void setTemps() {
+    for (int i = 0; i < rooms.length; i++) {
+      roomTem[i].setText(tempTemperature.format(roomTemp[i]) + " F");
     }
+    outsideTem.setText(lab + tempTemperature.format(outTemp) + " F");
+  }
 
-    private void setFar() {
-        un = " F";
-        for (int i = 0; i < 3; i++) {
-            roomTemp[i] = convertToFar(roomTemp[i]);
-            roomTem[i].setText((int) roomTemp[i] + " F");
+  void setTickSettings() {
+    for (int i = 0; i < rooms.length; i++) {
+      int finalI = i;
+      fan[i].addActionListener(_ -> {
+        ticks[finalI][0]++;
+        if (ticks[finalI][0] == 3) {
+          ticks[finalI][0] = 0;
         }
-        outTemp = convertToFar(outTemp);
-        outsideTem.setText("Outside Temperature: " + (int) outTemp + " F");
-        for (int i = 0; i < adjustTemperature.length; i++) {
-            adjustTemperature[i].setMaximum(113);
-            adjustTemperature[i].setMinimum(33);
-        }
-        for (int i = 0; i < adjustTemperature.length; i++) {
-            if (preferredTemperatures[i] > adjustTemperature[i].getValue()) {
-                preferredTemperatures[i] = convertToFar(preferredTemperatures[i]);
-            } else {
-                preferredTemperatures[i] = convertToFar(adjustTemperature[i].getValue());
-            }
-        }
-        for (int i = 0; i < adjustTemperature.length; i++) {
-
-            int t = (int) preferredTemperatures[i];
-            adjustTemperature[i].setValue(t);
-
-        }
-
+        modifyFanStatus();
+      });
     }
+  }
 
-    private void startModifyTemperature() {
-        r1 = new Timer(60000, _ -> {
-            float tmp = 0;
-            if (un.equals(" F")) {
-                if ((int) roomTemp[0] > (int) adjustTemperature[0].getValue()) {
-                    tmp = roomTemp[0] -= 33.8f;
-                    ticks[0][1] = 1;
-                }
-                if ((int) roomTemp[0] < (int) adjustTemperature[0].getValue()) {
-                    tmp = roomTemp[0] += 33.8f;
-                    ticks[0][1] = 2;
-                }
-            } else {
-                if ((int) roomTemp[0] > (int) adjustTemperature[0].getValue()) {
-                    tmp = roomTemp[0] -= 1;
-                    ticks[0][1] = 1;
-                }
-                if ((int) roomTemp[0] < (int) adjustTemperature[0].getValue()) {
-                    tmp = roomTemp[0] += 1;
-                    ticks[0][1] = 2;
-                }
-            }
-            if ((int) roomTemp[0] == (int) adjustTemperature[0].getValue()) {
-                ticks[0][1] = 0;
-            }
-            roomTem[0].setText((int) tmp + un);
-            modifyProcessStatus();
+  private void modifyFanStatus() {
+    for (int i = 0; i < rooms.length; i++) {
+      if (ticks[i][0] == 0) {
+        fan[i].setText("Off");
+        fan[i].setBackground(Color.red);
+        fan[i].setForeground(Color.white);
+      } else if (ticks[i][0] == 1) {
+        fan[i].setText("Automatic");
+        fan[i].setBackground(Color.BLUE);
+        fan[i].setForeground(Color.white);
+      } else {
+        fan[i].setText("On");
+        fan[i].setBackground(Color.green);
+        fan[i].setForeground(Color.black);
+      }
+      roomFan[i] = fan[i].getText();
+    }
+  }
+
+  private void modifyProcessStatus() {
+    for (int i = 0; i < rooms.length; i++) {
+      if (ticks[i][1] == 0) {
+        process[i].setText("--Standby--");
+        process[i].setBackground(Color.gray);
+        process[i].setForeground(Color.white);
+      } else if (ticks[i][1] == 1) {
+        int f = i;
+        int[] idx = {0};
+        process[f].setText(animation[idx[0]]);
+        if(temp.isRunning()){
+          temp.stop();
+        }
+        temp = new Timer(1000, _ -> {
+          if (idx[0] != 4) {
+            process[f].setText(animation[idx[0]]);
+            idx[0]++;
+          } else {
+            idx[0] = 0;
+            process[f].setText(animation[idx[0]]);
+          }
         });
-        r2 = new Timer(60000, _ -> {
-            float tmp = 0;
-            if (un.equals(" F")) {
-                if ((int) roomTemp[1] > (int) adjustTemperature[1].getValue()) {
-                    tmp = roomTemp[1] -= 33.8f;
-                    ticks[1][1] = 1;
-                }
-                if ((int) roomTemp[1] < (int) adjustTemperature[1].getValue()) {
-                    tmp = roomTemp[1] += 33.8f;
-                    ticks[1][1] = 2;
-                }
-            } else {
-                if ((int) roomTemp[1] > (int) adjustTemperature[1].getValue()) {
-                    tmp = roomTemp[1] -= 1;
-                    ticks[1][1] = 1;
-                }
-                if ((int) roomTemp[1] < (int) adjustTemperature[1].getValue()) {
-                    tmp = roomTemp[1] += 1;
-                    ticks[1][1] = 2;
-                }
-            }
-            if ((int) roomTemp[1] == (int) adjustTemperature[1].getValue()) {
-                ticks[1][1] = 0;
-            }
-            roomTem[1].setText((int) tmp + un);
-            modifyProcessStatus();
+        if (!temp.isRunning()) {
+          temp.start();
+        }
+        process[i].setBackground(Color.cyan);
+        process[i].setForeground(Color.black);
+      } else {
+        int f = i;
+        int[] idx = {4};
+        process[f].setText(animation[idx[0]]);
+        if(temp.isRunning()){
+          temp.stop();
+        }
+        temp = new Timer(1000, _ -> {
+          if (idx[0] != 8) {
+            process[f].setText(animation[idx[0]]);
+            idx[0]++;
+          } else {
+            idx[0] = 4;
+            process[f].setText(animation[idx[0]]);
+          }
         });
-        r3 = new Timer(60000, _ -> {
-            float tmp = 0;
-            if (un.equals(" F")) {
-                if ((int) roomTemp[2] > (int) adjustTemperature[2].getValue()) {
-                    tmp = roomTemp[2] -= 33.8f;
-                    ticks[2][1] = 1;
-                }
-                if ((int) roomTemp[2] < (int) adjustTemperature[2].getValue()) {
-                    tmp = roomTemp[2] += 33.8f;
-                    ticks[2][1] = 2;
-                }
-            } else {
-                if ((int) roomTemp[2] > (int) adjustTemperature[2].getValue()) {
-                    tmp = roomTemp[2] -= 1;
-                    ticks[2][1] = 1;
-                }
-                if ((int) roomTemp[2] < (int) adjustTemperature[2].getValue()) {
-                    tmp = roomTemp[2] += 1;
-                    ticks[2][1] = 2;
-                }
-            }
-            if ((int) roomTemp[2] == (int) adjustTemperature[2].getValue()) {
-                ticks[2][1] = 0;
-            }
-            roomTem[2].setText((int) tmp + un);
-            modifyProcessStatus();
-        });
-        s = new Timer(300000, _ -> {
-            int rand = (int) ((Math.random() * 9999) % 2);
-            if (Objects.equals(un, " F")) {
-                if (rand == 0) {
-                    outTemp += 33.8f;
-                } else {
-                    outTemp -= 33.8f;
-                }
-            } else {
-                if (rand == 0) {
-                    outTemp += 1;
-                } else {
-                    outTemp -= 1;
-                }
-            }
-            outsideTem.setText(lab + (int) outTemp + un);
-        });
-        u = new Timer(1000, _ -> updateTime());
-        s.start();
-        u.start();
-        r1.start();
-        r2.start();
-        r3.start();
-        for (int i = 0; i < rooms.length; i++) {
-            adjustTemperature[i].setMajorTickSpacing(13);
-            adjustTemperature[i].setPaintLabels(true);
-            adjustTemperature[i].setPaintTicks(true);
+        if (!temp.isRunning()) {
+          temp.start();
         }
+        process[i].setBackground(Color.red);
+        process[i].setForeground(Color.white);
+      }
+      fanMode[i] = process[i].getText();
     }
+  }
 
-    private void set() {
+  private void updateTime() {
+    SimpleDateFormat sdf = new SimpleDateFormat("hh:mm:ss a, EEEE");
+    updateDateTime();
+    timeLabel.setText("<html>" + sdf.format(Calendar.getInstance().getTime()) + "<br/>" + formattedDateTime + "</html>");
+  }
 
-        jl.setSize(width, height);
-        jl.setLayout(null);
-
-        p.setLocation(350, 100);
-        p.setOpaque(true);
-        p.setBackground(Color.white);
-        jl.add(p);
-        for (int i = 0; i < rooms.length; i++) {
-            JLabel room = rooms[i];
-            room.setSize(100, 20);
-            room.setLocation((100 * i) + 10, 80);
-            room.setFont(new Font("Arial", Font.PLAIN, 13));
-            room.setOpaque(true);
-            rooms[i].setHorizontalTextPosition(JLabel.CENTER);
-            rooms[i].setBackground(Color.white);
-            room.setHorizontalAlignment(JLabel.CENTER);
-            jl.add(room);
-            roomTem[i].setSize(100, 30);
-            roomTem[i].setHorizontalAlignment(SwingConstants.CENTER);
-            roomTem[i].setLocation((100 * i) + 10, 90);
-            roomTem[i].setFont(new Font("Arial", Font.PLAIN, 9));
-
-        }
-        outsideTem.setSize(800, 50);
-        outsideTem.setLocation(10, 0);
-        outsideTem.setFont(new Font("Arial", Font.PLAIN, 20));
-        timeLabel.setSize(400, 200);
-        timeLabel.setLocation(0, 450);
-//        timeLabel.setHorizontalAlignment(JLabel.);
-//        timeLabel.setBorder(new LineBorder(Color.black ,1));
-        timeLabel.setFont(new Font("Calibri", Font.PLAIN, 30));
-        for (int i = 0; i < rooms.length; i++) {
-            fan[i].setSize(100, 30);
-            fan[i].setLocation((100 * i) + 10, 120);
-            fan[i].setOpaque(true);
-            fan[i].setBorderPainted(false);
-            fan[i].setFocusable(false);
-            fan[i].setBackground(Color.gray);
-            process[i].setSize(100, 30);
-            process[i].setLocation((100 * i) + 10, 160);
-            process[i].setOpaque(true);
-            process[i].setFocusable(false);
-            process[i].setBackground(Color.gray);
-            process[i].setHorizontalAlignment(SwingConstants.CENTER);
-            process[i].setBorder(new LineBorder(Color.black, 1));
-        }
-        for (int i = 0; i < rooms.length; i++) {
-            adjustTemperature[i].setOrientation(SwingConstants.VERTICAL);
-            adjustTemperature[i].setSize(100, 300);
-            adjustTemperature[i].setLocation((100 * i) + 10, 190);
-            adjustTemperature[i].setFont(new Font("Arial", Font.PLAIN, 12));
-            adjustTemperature[i].setOpaque(false);
-            adjustTemperature[i].setBackground(Color.white);
-            int finalI = i;
-            adjustTemperature[i].addChangeListener(e -> {
-                if (adjustTemperature[finalI].getValue() > (int) roomTemp[finalI]) {
-                    ticks[finalI][1] = 2;
-                }
-                if (adjustTemperature[finalI].getValue() < (int) roomTemp[finalI]) {
-                    ticks[finalI][1] = 1;
-                }
-                if (adjustTemperature[finalI].getValue() == (int) roomTemp[finalI]) {
-                    ticks[finalI][1] = 0;
-                }
-                modifyProcessStatus();
-            });
-            adjustTemperature[i].addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    preferredTemperatures[finalI] = adjustTemperature[finalI].getValue();
-                }
-            });
-        }
-        unit.setSize(100, 100);
-        unit.setFocusable(false);
-        unit.setLocation(getWidth() - 100, getHeight() - 100);
-        unit.addActionListener(_ -> {
-            if (tick == 0) {
-                tick++;
-                setCel();
-                unit.setText("C");
-            } else if (tick == 1) {
-                tick--;
-                unit.setText("F");
-                setFar();
-            }
-        });
-        for (int i = 0; i < rooms.length; i++) {
-            jl.add(roomTem[i], JLayeredPane.DRAG_LAYER);
-        }
-        jl.add(outsideTem);
-        jl.add(timeLabel);
-        for (int i = 0; i < rooms.length; i++) {
-            jl.add(fan[i]);
-            jl.add(process[i]);
-        }
-        for (int i = 0; i < rooms.length; i++) {
-            jl.add(adjustTemperature[i]);
-        }
-        jl.add(unit);
-        add(jl);
-    }
-
-    Color getColor1() {
-        return new Color(Integer.valueOf("#E0384A".substring(1, 3), 16),
-                Integer.valueOf("#E0384A".substring(3, 5), 16),
-                Integer.valueOf("#E0384A".substring(5, 7), 16));
-    }
-
-    private void setTemps() {
-        for (int i = 0; i < rooms.length; i++) {
-            roomTem[i].setText((int) roomTemp[i] + " F");
-        }
-        outsideTem.setText(lab + (int) outTemp + " F");
-    }
-
-
-    void setTickSettings() {
-        for (int i = 0; i < rooms.length; i++) {
-            int finalI = i;
-            fan[i].addActionListener(_ -> {
-                ticks[finalI][0]++;
-                if (ticks[finalI][0] == 3) {
-                    ticks[finalI][0] = 0;
-                }
-                modifyFanStatus();
-            });
-        }
-    }
-
-    private void modifyFanStatus() {
-        for (int i = 0; i < rooms.length; i++) {
-            if (ticks[i][0] == 0) {
-                fan[i].setText("Off");
-                fan[i].setBackground(Color.red);
-                fan[i].setForeground(Color.white);
-            } else if (ticks[i][0] == 1) {
-                fan[i].setText("Automatic");
-                fan[i].setBackground(Color.BLUE);
-                fan[i].setForeground(Color.white);
-            } else {
-                fan[i].setText("On");
-                fan[i].setBackground(Color.green);
-                fan[i].setForeground(Color.black);
-            }
-            roomFan[i] = fan[i].getText();
-        }
-    }
-
-    private void modifyProcessStatus() {
-        for (int i = 0; i < rooms.length; i++) {
-            if (ticks[i][1] == 0) {
-                process[i].setText("--Standby--");
-                process[i].setBackground(Color.gray);
-                process[i].setForeground(Color.white);
-            } else if (ticks[i][1] == 1) {
-                process[i].setText("Cooling...");
-                process[i].setBackground(Color.cyan);
-                process[i].setForeground(Color.black);
-            } else {
-                process[i].setText("Heating...");
-                process[i].setBackground(Color.red);
-                process[i].setForeground(Color.white);
-            }
-            fanMode[i] = process[i].getText();
-        }
-    }
-
-    private void updateTime() {
-        SimpleDateFormat sdf = new SimpleDateFormat("hh:mm:ss a, EEEE");
-        updateDateTime();
-        timeLabel.setText("<html>" + sdf.format(Calendar.getInstance().getTime()) + "<br/>" + formattedDateTime + "</html>");
-    }
-
-    String formattedDateTime = "";
-
-    private void updateDateTime() {
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
-        formattedDateTime = now.format(formatter);
-    }
+  private void updateDateTime() {
+    LocalDateTime now = LocalDateTime.now();
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+    formattedDateTime = now.format(formatter);
+  }
 
 }
