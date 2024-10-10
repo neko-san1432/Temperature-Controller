@@ -1,18 +1,18 @@
 package Prototype2;
 
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class SetTime extends JFrame {
+public class SetTime extends JPanel {
   JButton w = new JButton("w"), x = new JButton("x"), y = new JButton("y"), z = new JButton("z");
-  JLabel time = new JLabel("00:00");
-  String t = "";
+  static JLabel time = new JLabel("00:00");
   int hour = 0, minute = 0;
 
   public SetTime(int width, int height) {
-//    setOpaque(true);
+    setOpaque(true);
     setLayout(null);
     setBackground(Color.white);
     setSize(width, height);
@@ -24,8 +24,10 @@ public class SetTime extends JFrame {
   }
 
   private void setw() {
-    w.setSize(200, 100);
-    w.setLocation(50, 0);
+    w.setSize(45, 30);
+    w.setLocation(0, 0);
+    w.setFocusable(false);
+    w.setContentAreaFilled(false);
     w.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -39,8 +41,10 @@ public class SetTime extends JFrame {
   }
 
   private void setx() {
-    x.setSize(200, 100);
-    x.setLocation(200, 0);
+    x.setSize(45, 30);
+    x.setLocation(50, 0);
+    x.setFocusable(false);
+    x.setContentAreaFilled(false);
     x.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -54,8 +58,10 @@ public class SetTime extends JFrame {
   }
 
   private void sety() {
-    y.setSize(200, 100);
-    y.setLocation(50, 300);
+    y.setSize(45, 30);
+    y.setLocation(0, 70);
+    y.setFocusable(false);
+    y.setContentAreaFilled(false);
     y.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -69,8 +75,10 @@ public class SetTime extends JFrame {
   }
 
   private void setz() {
-    z.setSize(200, 100);
-    z.setLocation(200, 300);
+    z.setSize(45, 30);
+    z.setLocation(50, 70);
+    z.setFocusable(false);
+    z.setContentAreaFilled(false);
     z.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -83,8 +91,9 @@ public class SetTime extends JFrame {
     add(z);
   }
   private void settime(){
-    time.setSize(300,200);
-    time.setLocation(150,0);
+    time.setSize(100,40);
+    time.setLocation(0,35);
+    time.setFont(new Font("Calibri", Font.PLAIN,40));
     add(time);
   }
 
@@ -97,8 +106,5 @@ public class SetTime extends JFrame {
       b = "0"+minute;
     }
     time.setText(a + ":" + b);
-  }
-  public static void main(String[] args) {
-    SwingUtilities.invokeLater(()->new SetTime(100,100).setVisible(true));
   }
 }
