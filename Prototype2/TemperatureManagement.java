@@ -175,9 +175,8 @@ public class TemperatureManagement extends JFrame {
       }
     }
     if ((int) roomTemp[index] == adjustTemperature[index].getValue()) {
-      System.out.println("asd");
-      temperatureTask[index].stop();
-      if (process[index].getText().equals("Heating") || process[index].getText().equals("Heating.") || process[index].getText().equals("Heating..") || process[index].getText().equals("Heating...")) {
+      temp[index].stop();
+      if (process[index].getText().startsWith("Heat")) {
         process[index].setText(animation[9]);
       } else {
         process[index].setText(animation[8]);
