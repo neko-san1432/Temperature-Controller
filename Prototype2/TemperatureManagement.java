@@ -13,6 +13,11 @@ import java.util.HashMap;
 
 public class TemperatureManagement extends JFrame {
   static String un = " F";
+  static JPanel ts = new SetTime(95, 100);
+  static JTextField textField = new JTextField();
+  static HashMap<String, Integer> getTemp = new HashMap<>();
+  static HashMap<String,Integer[]>getSchedTime = new HashMap<>();
+  static String day = "", month = "", year = "";
   Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
   int width = 800, height = 600, tick = 0;
   JLabel[] rooms = {new JLabel("Room"), new JLabel("Kitchen"), new JLabel("Living Room")}, roomTem = {new JLabel(), new JLabel(), new JLabel()};
@@ -32,16 +37,18 @@ public class TemperatureManagement extends JFrame {
   int[][] ticks = {{0, 0}, {0, 0}, {0, 0}};
   JLayeredPane jl = new JLayeredPane();
   JPanel p = new calendar(350, 300);
-  static JPanel ts = new SetTime(95, 100);
-  static JTextField textField = new JTextField();
   //to be edited
-  JButton set = new JButton("set");
-  static HashMap<String, Integer> getTemp = new HashMap<>(), getSchedTime = new HashMap<>();
+  static JButton set = new JButton("set");
   String formattedDateTime = "";
   DecimalFormat tempTemperature = new DecimalFormat("##. #");
-  String[] animation = {"Cooling", "Cooling.", "Cooling..", "Cooling...", "Heating", "Heating.", "Heating..", "Heating...","Cooled","Heated"};
-  Timer temp = null;
-  static String day = "",month = "",year="";
+  String[] animation = {"Cooling", "Cooling.", "Cooling..", "Cooling...", "Heating", "Heating.", "Heating..", "Heating...", "Cooled", "Heated"};
+  Timer[] temp = {new Timer(0, null), new Timer(0, null), new Timer(0, null)};
+  JLabel[] as = {new JLabel("--"), new JLabel("--"), new JLabel("--")};
+  static JLabel uni = new JLabel("F");
+  JLabel errorMsg = new JLabel();
+  Timer t;
+  int tick1 = 0;
+
   public TemperatureManagement() {
     setSize(width, height);
     setUndecorated(true);
@@ -128,10 +135,13 @@ public class TemperatureManagement extends JFrame {
     s = new Timer(300000, _ -> {
       float x = weather.getWeather();
       if (x > -1) {
-        outsideTem.setText(lab + x + un);
+        if (un.equals(" F")) {
+          outsideTem.setText(lab + tempTemperature.format(convertToCel(x)) + un);
+        } else {
+          outsideTem.setText(lab + tempTemperature.format(x) + un);
+        }
       } else {
         outsideTem.setText(lab + "No internet connection");
-
       }
     });
     u = new Timer(1000, _ -> updateTime());
@@ -151,7 +161,7 @@ public class TemperatureManagement extends JFrame {
         ticks[index][1] = 1;
       }
       if ((int) roomTemp[index] < adjustTemperature[index].getValue()) {
-        roomTemp[0] += 1;
+        roomTemp[index] += 1;
         ticks[index][1] = 2;
       }
     } else {
@@ -164,15 +174,81 @@ public class TemperatureManagement extends JFrame {
         ticks[index][1] = 2;
       }
     }
+    if ((int) roomTemp[index] == adjustTemperature[index].getValue()) {
+      System.out.println("asd");
+      temperatureTask[index].stop();
+      if (process[index].getText().equals("Heating") || process[index].getText().equals("Heating.") || process[index].getText().equals("Heating..") || process[index].getText().equals("Heating...")) {
+        process[index].setText(animation[9]);
+      } else {
+        process[index].setText(animation[8]);
+      }
+    }
     roomTem[index].setText(tempTemperature.format(roomTemp[index]) + un);
   }
 
+  private void modifyProcessStatus() {
+    for (int i = 0; i < rooms.length; i++) {
+      if (ticks[i][1] == 0) {
+        process[i].setText("--Standby--");
+        process[i].setBackground(Color.gray);
+        process[i].setForeground(Color.white);
+      } else if (ticks[i][1] == 1) {
+        int f = i;
+        int[] idx = {0};
+        process[f].setText(animation[idx[0]]);
+        if (temp[f].isRunning()) {
+          temp[f].stop();
+        }
+        temp[f] = new Timer(1000, _ -> {
+          if (idx[0] != 4) {
+            process[f].setText(animation[idx[0]]);
+            idx[0]++;
+          } else {
+            idx[0] = 0;
+            process[f].setText(animation[idx[0]]);
+          }
+        });
+        if (!temp[f].isRunning()) {
+          temp[f].start();
+        }
+        process[i].setBackground(Color.cyan);
+        process[i].setForeground(Color.black);
+      } else {
+        int f = i;
+        int[] idx = {4};
+        process[f].setText(animation[idx[0]]);
+        if (temp[f].isRunning()) {
+          temp[f].stop();
+        }
+        temp[f] = new Timer(1000, _ -> {
+          if (idx[0] != 8) {
+            process[f].setText(animation[idx[0]]);
+            idx[0]++;
+          } else {
+            idx[0] = 4;
+            process[f].setText(animation[idx[0]]);
+          }
+        });
+        if (!temp[f].isRunning()) {
+          temp[f].start();
+        }
+        process[i].setBackground(Color.red);
+        process[i].setForeground(Color.white);
+      }
+      fanMode[i] = process[i].getText();
+    }
+  }
+
   private void set() {
+    errorMsg.setSize(120,80);
+    errorMsg.setLocation(525,520);
+    add(errorMsg);
     jl.setSize(width, height);
     jl.setLayout(null);
     jl.setOpaque(true);
     jl.setBackground(Color.white);
     ts.setLocation(525, 420);
+    ts.setVisible(false);
     p.setLocation(398, 100);
     p.setOpaque(true);
     p.setBackground(Color.white);
@@ -192,12 +268,8 @@ public class TemperatureManagement extends JFrame {
       roomTem[i].setHorizontalAlignment(SwingConstants.CENTER);
       roomTem[i].setLocation((100 * i) + 10, 90);
       roomTem[i].setFont(new Font("Arial", Font.PLAIN, 9));
-
     }
-    textField.setSize(0, 0);
-    textField.setLocation(0, 0);
-    set.setSize(0, 0);
-    set.setLocation(0, 0);
+
     outsideTem.setSize(800, 50);
     outsideTem.setLocation(10, 0);
     outsideTem.setFont(new Font("Arial", Font.PLAIN, 20));
@@ -226,6 +298,8 @@ public class TemperatureManagement extends JFrame {
       adjustTemperature[i].setFont(new Font("Arial", Font.PLAIN, 12));
       adjustTemperature[i].setOpaque(false);
       adjustTemperature[i].setBackground(Color.white);
+      as[i].setSize(100, 10);
+      as[i].setLocation((100 * i) + 10, 490);
       int finalI = i;
       adjustTemperature[i].addChangeListener(e -> {
         if (adjustTemperature[finalI].getValue() > (int) roomTemp[finalI]) {
@@ -233,24 +307,23 @@ public class TemperatureManagement extends JFrame {
           temperatureTask[finalI] = new Timer(10000, _ -> {
             temperatureManipulation(finalI);
           });
-          temperatureTask[finalI].start();
         }
         if (adjustTemperature[finalI].getValue() < (int) roomTemp[finalI]) {
           ticks[finalI][1] = 1;
           temperatureTask[finalI] = new Timer(5000, _ -> {
             temperatureManipulation(finalI);
           });
-          temperatureTask[finalI].start();
         }
         if (adjustTemperature[finalI].getValue() == (int) roomTemp[finalI]) {
           ticks[finalI][1] = 0;
-          if (temperatureTask[finalI].isRunning()) {
-            temperatureTask[finalI].stop();
-          }
           temperatureManipulation(finalI);
         }
+        as[finalI].setText(String.valueOf(adjustTemperature[finalI].getValue()));
         modifyProcessStatus();
+        temperatureTask[finalI].restart();
       });
+      temperatureTask[i].start();
+      jl.add(as[i]);
       adjustTemperature[i].addMouseListener(new MouseAdapter() {
         @Override
         public void mouseReleased(MouseEvent e) {
@@ -284,36 +357,62 @@ public class TemperatureManagement extends JFrame {
     for (int i = 0; i < rooms.length; i++) {
       jl.add(adjustTemperature[i]);
     }
-    textField.setLocation(0,0);
-    textField.setSize(0,0);
+    textField.setSize(35, 20);
+    uni.setSize(20,30);
+    uni.setLocation(485, 410);
+    textField.setLocation(450, 420);
+    set.setSize(60, 40);
+    set.setLocation(440, 445);
+    textField.setVisible(false);
+    uni.setVisible(false);
+    set.setVisible(false);
     textField.addKeyListener(new KeyAdapter() {
       @Override
       public void keyTyped(KeyEvent e) {
-        if(!Character.isDigit(e.getKeyChar())){
+        if (!Character.isDigit(e.getKeyChar()) || textField.getText().length() > 2) {
           e.consume();
         }
       }
     });
-    set.setSize(0,0);
-    set.setLocation(0,0);
+
     set.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
-        if(un.equals(" F")){
-          if(Integer.parseInt(textField.getText())>113||Integer.parseInt(textField.getText())<33){
+        if (un.equals(" F")) {
+          if (Integer.parseInt(textField.getText()) > 113 || Integer.parseInt(textField.getText()) < 33) {
             //error
-          }else{
-            //ok
+            System.out.println("1");
+            showError();
+          } else {
+            System.out.println("2");
+            String[] t = SetTime.time.getText().split(":");
+            getSchedTime.put((month + " " + day + " " + year),new Integer[]{ Integer.parseInt(t[0]),Integer.parseInt(t[1])});
+            getTemp.put((month + " " + day + " " + year), Integer.parseInt(textField.getText()));
+            textField.setVisible(false);
+            set.setVisible(false);
+            uni.setVisible(false);
+            ts.setVisible(false);
           }
-        }else {
-          if(Integer.parseInt(textField.getText())>46||Integer.parseInt(textField.getText())<0){
+        } else {
+          if (Integer.parseInt(textField.getText()) > 46 || Integer.parseInt(textField.getText()) < 0) {
             //error
-          }else{
+            System.out.println("3");
+            showError();
+          } else {
             //ok
+            System.out.println("4");
+            String[] t = SetTime.time.getText().split(":");
+            getSchedTime.put((month + " " + day + " " + year),new Integer[]{ Integer.parseInt(t[0]),Integer.parseInt(t[1])});
+            getTemp.put((month + " " + day + " " + year), Integer.parseInt(textField.getText()));
+            textField.setVisible(false);
+            set.setVisible(false);
+            uni.setVisible(false);
+            ts.setVisible(false);
           }
         }
       }
     });
+    jl.add(uni);
     jl.add(unit);
     jl.add(textField);
     jl.add(set);
@@ -324,6 +423,35 @@ public class TemperatureManagement extends JFrame {
     return new Color(Integer.valueOf(hex.substring(1, 3), 16),
     Integer.valueOf(hex.substring(3, 5), 16),
     Integer.valueOf(hex.substring(5, 7), 16));
+  }
+
+  private void showError() {
+    String x;
+    if (un.equals(" F")) {
+      x = "<html>Temperature must be equal or<br/>greater than to 33 or less than<br/>or equal to 113</html>";
+    } else {
+      x = "<html>Temperature must be equal or<br/>greater than to 16 or less than<br/>or equal to 46</html>";
+    }
+    errorMsg.setText(x);
+    showErr();
+  }
+
+  private void showErr() {
+    if(t.isRunning()){
+      t.restart();
+      return;
+    }
+    t = new Timer(3000, _ -> {
+      if (tick1 == 0) {
+        tick1++;
+        errorMsg.setVisible(true);
+      } else {
+        tick1--;
+        errorMsg.setVisible(false);
+        t.stop();
+      }
+    });
+    t.start();
   }
 
   private void setTemps() {
@@ -362,59 +490,6 @@ public class TemperatureManagement extends JFrame {
         fan[i].setForeground(Color.black);
       }
       roomFan[i] = fan[i].getText();
-    }
-  }
-
-  private void modifyProcessStatus() {
-    for (int i = 0; i < rooms.length; i++) {
-      if (ticks[i][1] == 0) {
-        process[i].setText("--Standby--");
-        process[i].setBackground(Color.gray);
-        process[i].setForeground(Color.white);
-      } else if (ticks[i][1] == 1) {
-        int f = i;
-        int[] idx = {0};
-        process[f].setText(animation[idx[0]]);
-        if(temp.isRunning()){
-          temp.stop();
-        }
-        temp = new Timer(1000, _ -> {
-          if (idx[0] != 4) {
-            process[f].setText(animation[idx[0]]);
-            idx[0]++;
-          } else {
-            idx[0] = 0;
-            process[f].setText(animation[idx[0]]);
-          }
-        });
-        if (!temp.isRunning()) {
-          temp.start();
-        }
-        process[i].setBackground(Color.cyan);
-        process[i].setForeground(Color.black);
-      } else {
-        int f = i;
-        int[] idx = {4};
-        process[f].setText(animation[idx[0]]);
-        if(temp.isRunning()){
-          temp.stop();
-        }
-        temp = new Timer(1000, _ -> {
-          if (idx[0] != 8) {
-            process[f].setText(animation[idx[0]]);
-            idx[0]++;
-          } else {
-            idx[0] = 4;
-            process[f].setText(animation[idx[0]]);
-          }
-        });
-        if (!temp.isRunning()) {
-          temp.start();
-        }
-        process[i].setBackground(Color.red);
-        process[i].setForeground(Color.white);
-      }
-      fanMode[i] = process[i].getText();
     }
   }
 
