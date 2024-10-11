@@ -9,7 +9,7 @@ import java.awt.event.ActionListener;
 public class SetTime extends JPanel {
   JButton w = new JButton("w"), x = new JButton("x"), y = new JButton("y"), z = new JButton("z");
   static JLabel time = new JLabel("00:00");
-  int hour = 0, minute = 0;
+  static int hour = 0, minute = 0;
 
   public SetTime(int width, int height) {
     setOpaque(true);
