@@ -1,13 +1,12 @@
 package Prototype2;
 
 import javax.swing.*;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class SetTime extends JPanel {
-  JButton w = new JButton("w"), x = new JButton("x"), y = new JButton("y"), z = new JButton("z");
+  JButton w = new JButton("^"), x = new JButton("^"), y = new JButton("v"), z = new JButton("v");
   static JLabel time = new JLabel("00:00");
   static int hour = 0, minute = 0;
 
