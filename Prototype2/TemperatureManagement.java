@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.HashMap;
-
 public class TemperatureManagement extends JFrame {
   static String un = " F";
   static JPanel ts = new SetTime(95, 100);
@@ -46,7 +45,7 @@ public class TemperatureManagement extends JFrame {
   JLabel[] as = {new JLabel("--"), new JLabel("--"), new JLabel("--")};
   static JLabel uni = new JLabel("F");
   JLabel errorMsg = new JLabel();
-  Timer t;
+  Timer t = new Timer(0, null);
   int tick1 = 0;
 
   public TemperatureManagement() {
@@ -85,7 +84,7 @@ public class TemperatureManagement extends JFrame {
       roomTemp[i] = convertToCel(roomTemp[i]);
       roomTem[i].setText(tempTemperature.format(roomTemp[i]) + " C");
     }
-    outTemp = convertToCel(outTemp);
+    outTemp = weather.getWeather();
     outsideTem.setText("Outside Temperature: " + tempTemperature.format(outTemp) + " C");
     for (int i = 0; i < adjustTemperature.length; i++) {
       if (preferredTemperatures[i] > adjustTemperature[i].getValue()) {
@@ -111,7 +110,7 @@ public class TemperatureManagement extends JFrame {
       roomTemp[i] = convertToFar(roomTemp[i]);
       roomTem[i].setText(tempTemperature.format(roomTemp[i]) + " F");
     }
-    outTemp = convertToFar(outTemp);
+    outTemp = convertToFar(weather.getWeather());
     outsideTem.setText("Outside Temperature: " + tempTemperature.format(outTemp) + " F");
     for (int i = 0; i < adjustTemperature.length; i++) {
       adjustTemperature[i].setMaximum(113);
@@ -136,7 +135,7 @@ public class TemperatureManagement extends JFrame {
       float x = weather.getWeather();
       if (x > -1) {
         if (un.equals(" F")) {
-          outsideTem.setText(lab + tempTemperature.format(convertToCel(x)) + un);
+          outsideTem.setText(lab + tempTemperature.format(convertToFar(x)) + un);
         } else {
           outsideTem.setText(lab + tempTemperature.format(x) + un);
         }
@@ -241,6 +240,7 @@ public class TemperatureManagement extends JFrame {
   private void set() {
     errorMsg.setSize(120,80);
     errorMsg.setLocation(525,520);
+    errorMsg.setHorizontalAlignment(JLabel.CENTER);
     add(errorMsg);
     jl.setSize(width, height);
     jl.setLayout(null);
@@ -358,7 +358,7 @@ public class TemperatureManagement extends JFrame {
     }
     textField.setSize(35, 20);
     uni.setSize(20,30);
-    uni.setLocation(485, 410);
+    uni.setLocation(485, 415);
     textField.setLocation(450, 420);
     set.setSize(60, 40);
     set.setLocation(440, 445);
@@ -380,12 +380,10 @@ public class TemperatureManagement extends JFrame {
         if (un.equals(" F")) {
           if (Integer.parseInt(textField.getText()) > 113 || Integer.parseInt(textField.getText()) < 33) {
             //error
-            System.out.println("1");
             showError();
           } else {
-            System.out.println("2");
             String[] t = SetTime.time.getText().split(":");
-            getSchedTime.put((month + " " + day + " " + year),new Integer[]{ Integer.parseInt(t[0]),Integer.parseInt(t[1])});
+            getSchedTime.put((month + "-" + day + " " + year),new Integer[]{ Integer.parseInt(t[0]),Integer.parseInt(t[1])});
             getTemp.put((month + " " + day + " " + year), Integer.parseInt(textField.getText()));
             textField.setVisible(false);
             set.setVisible(false);
@@ -395,14 +393,12 @@ public class TemperatureManagement extends JFrame {
         } else {
           if (Integer.parseInt(textField.getText()) > 46 || Integer.parseInt(textField.getText()) < 0) {
             //error
-            System.out.println("3");
             showError();
           } else {
             //ok
-            System.out.println("4");
             String[] t = SetTime.time.getText().split(":");
-            getSchedTime.put((month + " " + day + " " + year),new Integer[]{ Integer.parseInt(t[0]),Integer.parseInt(t[1])});
-            getTemp.put((month + " " + day + " " + year), Integer.parseInt(textField.getText()));
+            getSchedTime.put((month + "-" + day + "-" + year),new Integer[]{ Integer.parseInt(t[0]),Integer.parseInt(t[1])});
+            getTemp.put((month + "-" + day + "-" + year), Integer.parseInt(textField.getText()));
             textField.setVisible(false);
             set.setVisible(false);
             uni.setVisible(false);
@@ -445,6 +441,7 @@ public class TemperatureManagement extends JFrame {
         tick1++;
         errorMsg.setVisible(true);
       } else {
+        System.out.println("asd");
         tick1--;
         errorMsg.setVisible(false);
         t.stop();
@@ -495,6 +492,13 @@ public class TemperatureManagement extends JFrame {
   private void updateTime() {
     SimpleDateFormat sdf = new SimpleDateFormat("hh:mm:ss a, EEEE");
     updateDateTime();
+    if(getSchedTime.containsKey(formattedDateTime)){
+      if(sdf.format(Calendar.getInstance().getTime()).startsWith(getSchedTime.get(formattedDateTime)[0]+":"+getSchedTime.get(formattedDateTime)[1])){
+        for(int i=0;i<adjustTemperature.length ;i++){
+          adjustTemperature[i].setValue(getTemp.get(formattedDateTime));
+        }
+      }
+    }
     timeLabel.setText("<html>" + sdf.format(Calendar.getInstance().getTime()) + "<br/>" + formattedDateTime + "</html>");
   }
 
