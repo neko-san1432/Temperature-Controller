@@ -7,7 +7,7 @@ import java.awt.event.MouseListener;
 
 public class CustomLabel extends JLabel implements MouseListener {
     String focusedDay = "";
-    public CustomLabel(String label){
+    public CustomLabel(String label/*,int horizontalAlignment*/){
         setText(label);
         setOpaque(true);
         setBackground(Color.white);
@@ -46,7 +46,7 @@ public class CustomLabel extends JLabel implements MouseListener {
 
     @Override
     public void mousePressed(MouseEvent e) {
-
+        
     }
 
     @Override
